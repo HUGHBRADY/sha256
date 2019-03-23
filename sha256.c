@@ -92,12 +92,12 @@ void sha256(){
 
         // Step 3.
         for (t = 0; t < 64; t++) {
-            T1 = h + SIG1(e) + Ch(e, f, g + K[t] + W[t];
+            T1 = h + SIG1(e) + Ch(e, f, g) + K[t] + W[t];
             T2 = SIG0(a) + Maj(a, b, c);
             h = g;
             g = f;
             f = e;
-            e = d;
+            e = d + T1;
             d = c;
             c = b; 
             b = a;
@@ -116,7 +116,7 @@ void sha256(){
     
     }
 
-    printf("%x %x %x %x %x %x %x %x %x/n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
+    printf("%x %x %x %x %x %x %x %x %x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
    
 }
 
@@ -128,7 +128,6 @@ uint32_t shr(uint32_t n, uint32_t x){
     return (x >> n);
 }
 
-.
 uint32_t sig0(uint32_t x){
     // Sections 3.2 & 4.1.2 
     return (rotr(7, x) ^ rotr(18, x) ^ shr(3, x));
