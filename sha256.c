@@ -1,6 +1,6 @@
 // Hugh Brady - G00338260
 // The Secure Hash Algorithm, 256 bit version
-// https://ws680.nist.gov/publication/get_pdf.cfm?pub_id919060
+// https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
 
 #include <stdio.h>
 #include <stdint.h>
@@ -141,7 +141,6 @@ uint32_t sig1(uint32_t x){
 uint32_t SIG0(uint32_t x) {
     return (rotr(2, x) ^ rotr(13, x) ^ rotr(22, x));
 }
-
 
 uint32_t SIG1(uint32_t x){ 
      return (rotr(6, x) ^ rotr(11, x) ^ rotr(25, x));
