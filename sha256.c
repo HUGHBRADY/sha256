@@ -18,7 +18,8 @@ union msgblock {
 // For tracking where the program is when padding the message.
 enum status {READ, PAD0, PAD1, FINISH};
 
-void sha256();
+// Calculates SHA256 hash of a file
+void sha256(FILE *f);
 
 // See Section 4.1.2.
 uint32_t sig0(uint32_t x);
@@ -56,17 +57,32 @@ int nextmsgblock(FILE *f, union msgblock *M, enum status *S, int *nobits);
 
 int main(int argc, char *argv[]){
     
-    sha256();
+    FILE* f;
+    f = fopen(argv[1], "r");
+
+    sha256(f);
     return 0;
 
 }
 
-void sha256(){
+void sha256(FILE *f) {
+   
+    // The current message block.
+    union msgblock M;
     
+    // The number of bits read from the file.
+    // This integer is to be appended at the end of the message block.
+    uint64_t nobits = 0;
+    
+    // The padding status of the message block
+    enum status S = READ;
+
     // Message schedule (Section 6.2).
     uint32_t W[64];
+
     // Working variables (Section 6.).)
     uint32_t a, b, c, d, e, f, g, h;
+    
     // Two temporary variables (Section 6.2).
     uint32_t T1, T2;
     
@@ -102,23 +118,20 @@ void sha256(){
         0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
         0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
     };
-
-    // The current message block.
-    uint32_t M[16] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    
+   
     // Loop variables.
-    int i, t;
+    int i, j;
 
     // Loop through message blocks as per step 2, page 22.
-    for (i = 0; i < 1; i++) {
+    while (nextmesgblock(f, M, S, nobits)) {
 
-        // W[t] = M[t] for 0 <= t <=15 (Page 22).
+        // W[j] = M[j] for 0 <= t <=15 (Page 22).
         for (t = 0; t < 16; t++) 
-             W[t] = M[t];
+             W[j] = M.t[j];
     
         // W[t] = ... (Page 22).
-        for (t = 16; t < 64; t++)
-            W[t] = sig1(W[t-2]) + W[t-7] + sig0(W[t-15]) + W[t-16];
+        for (j = 16; j < 64; j++)
+            W[j] = sig1(W[j-2]) + W[j-7] + sig0(W[j-15]) + W[j-16];
         
         // Initialise a, b, c, d and e as per step 2, page 22.
         a = H[0]; b = H[1]; c = H[2]; d = H[3];
@@ -126,7 +139,7 @@ void sha256(){
 
         // Step 3.
         for (t = 0; t < 64; t++) {
-            T1 = h + SIG1(e) + Ch(e, f, g) + K[t] + W[t];
+            T1 = h + SIG1(e) + Ch(e, f, g) + K[j] + W[j];
             T2 = SIG0(a) + Maj(a, b, c);
             h = g;
             g = f;
@@ -188,4 +201,63 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z) {
     return ((x & y) ^ (x & z) ^ (y & z));
  }
 
+int nextmsgblock(FILE *f, union msgblock *M, enum status *S, int *nobits) {  
 
+    // The number of bytes in current message block.
+    uint64_t nobytes;
+    
+    // Loop variables.
+    int i;
+
+    // If we have finished all the message blocks, then S should be FINISH.
+    if (*S == FINISH)
+        return 0;
+
+    // Otherwise, check if we need another block full of padding.
+    if (S == PAD0 || S == PAD1) { 
+        
+        // Set the first 56 bytes to all zero bits.
+        for (i = 0; i < 56; i++) 
+            M.e[i] = 0x00;
+        // Set the last 64 bits to the number of bits in the file
+        // Should be big-endian.
+        M.s[7] = nobits;
+        *S = FINISH;
+    } 
+    
+
+    while (S == READ) {
+
+        nobytes = fread(M.e, 1, 64, f);
+        printf("Read %2llu bytes \n", nobytes);
+        nobits = nobits + (nobytes * 8);
+
+        if (nobytes < 56) {
+            printf("I've found a block with less than 55 bytes.\n");
+            // Append 1 to message.
+            M.e[nobytes] = 0x80;
+            
+            while (nobytes < 56) {
+                nobytes = nobytes + 1;
+                // Set bytes to 0 
+                M.e[nobytes] = 0x00;
+            }
+            
+            M.s[7] = nobits;
+            S = FINISH;
+        } else if (nobytes < 64) { 
+            // Set status
+            S = PAD0;
+            // Append 1 to message.
+            M.e[nobytes] = 0x80;
+
+            while (nobytes < 64) {
+                nobytes = nobytes + 1;
+                // Fill the rest with 0's.
+                M.e[nobytes] = 0x00;
+            }
+        } else if (feof(f)) {
+            S = PAD1;
+        }
+    }
+}
