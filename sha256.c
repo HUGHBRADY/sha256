@@ -2,19 +2,33 @@
 // The Secure Hash Algorithm, 256 bit version
 // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
 
+// For input/ output header file.
 #include <stdio.h>
+// For using fixed bit length integers.
 #include <stdint.h>
+
+// msgblock is a single variable that you can access as any of b, t or s.
+// Meaning you can access msgblock as a 64 bit, 16 bit or 8 bit integer.
+union msgblock {
+    uint8_t  e[64];
+    uint32_t t[16];
+    uint64_t  s[8];
+};
+
+// For tracking where the program is when padding the message.
+enum status {READ, PAD0, PAD1, FINISH};
 
 void sha256();
 
-// See Sections 4.1.2 and 4.2.2 for definitions.
+// See Section 4.1.2.
 uint32_t sig0(uint32_t x);
 uint32_t sig1(uint32_t x);
 
-//Section 3.2
+// Section 3.2
 uint32_t rotr(uint32_t n, uint32_t x);
 uint32_t shr(uint32_t n, uint32_t x);
 
+// Section 4.1.2
 uint32_t SIG0(uint32_t x);
 uint32_t SIG1(uint32_t x);
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z);
@@ -22,15 +36,23 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 
 /*
 // Macro Functions - Section 3.2
+// See Section 4.1.2.
 #define rotr(x, n)   (x >> n) | (x << (32 - n))
 #define shr(x, n)    (x >> n)
+
+// Section 3.2
 #define sig0(x)      (rotr(7, x)  ^ rotr(18, x) ^ shr(3, x))
 #define sig1(x)      (rotr(17, x) ^ rotr(19, x) ^ shr(10, x))
+
+// Section 4.1.2
 #define SIG0(x)      (rotr(2, x)  ^ rotr(13, x) ^ rotr(22, x))
 #define SIG1(x)      (rotr(6, x)  ^ rotr(11, x) ^ rotr(25, x))
 #define Ch(x, y, z)  (x & y) ^ ((!x) & z)
 #define Maj(x, y, z) (x & y) ^ (x & z) ^ (y & z)
 */
+
+// Retrieves the next message block.
+int nextmsgblock(FILE *f, union msgblock *M, enum status *S, int *nobits);
 
 int main(int argc, char *argv[]){
     
