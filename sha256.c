@@ -56,6 +56,19 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 #define Maj(x, y, z) (x & y) ^ (x & z) ^ (y & z)
 
 */
+ 
+// Macro function for converting from little endian to big endian.
+// http://www.mit.edu/afs.new/sipb/project/merakidev/include/bits/byteswap.h
+# define BigEndian(x)                       \
+ ((((x) & 0xff00000000000000ull) >> 56)     \
+| (((x) & 0x00ff000000000000ull) >> 40)     \
+| (((x) & 0x0000ff0000000000ull) >> 24)     \
+| (((x) & 0x000000ff00000000ull) >> 8)      \
+| (((x) & 0x00000000ff000000ull) << 8)      \
+| (((x) & 0x0000000000ff0000ull) << 24)     \
+| (((x) & 0x000000000000ff00ull) << 40)     \
+| (((x) & 0x00000000000000ffull) << 56))
+
 
 int main(int argc, char *argv[]){
     
@@ -77,9 +90,9 @@ void sha256(FILE *file) {
    
     // The current message block.
     union msgblock M;
-    
+   
     // The number of bits read from the file.
-    // This integer is to be appended at the end of the message block.
+    // This integer is to be appended at the end of the message block. 
     uint64_t nobits = 0;
     
     // The padding status of the message block
@@ -97,14 +110,10 @@ void sha256(FILE *file) {
     // The Hash value (Section 6.2).
     // These values come from Section 5.3.3.
     uint32_t H[8] = {
-          0x6a09e667
-        , 0xbb67ae85
-        , 0x3c6ef372
-        , 0xa54ff53a
-        , 0x510e527f
-        , 0x9b05688c
-        , 0x1f83d9ab
-        , 0x5be0cd19
+        0x6a09e667, 0xbb67ae85, 
+        0x3c6ef372, 0xa54ff53a, 
+        0x510e527f, 0x9b05688c,
+        0x1f83d9ab, 0x5be0cd19
     };
 
     // The K constants (Section 4.2.2).
@@ -134,8 +143,10 @@ void sha256(FILE *file) {
     while (nextmsgblock(file, &M, &S, &nobits)) {
 
         // W[j] = M[j] for 0 <= t <=15 (Page 22).
-        for (j = 0; j < 16; j++) 
+        for (j = 0; j < 16; j++) { 
              W[j] = M.t[j];
+             W[j] = BigEndian(W[j]);
+        }
     
         // W[j] = ... (Page 22).
         for (j = 16; j < 64; j++)
@@ -168,7 +179,6 @@ void sha256(FILE *file) {
         H[5] = f + H[5];
         H[6] = g + H[6];
         H[7] = h + H[7];
-    
     }
 
     printf("%x %x %x %x %x %x %x %x %x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
@@ -222,11 +232,12 @@ int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits
         // Add 0 bits up to last 64 bits.
         while (nobytes < 56) {
             nobytes = nobytes + 1;
-            // Set bytes to 0 
+            // Set bytes to 0.
             M->e[nobytes] = 0x00;
         }
         
         // Append the file size in bits.
+        // Convert from little to big endian
         M->s[7] = *nobits;
 
         // Set status to FINISH.
@@ -289,3 +300,14 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z) {
  }
 
 
+
+/* 
+    Function check_for_endianness() returns 1, if architecture is little endian, 0 in case of big endian.
+    http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php?fbclid=IwAR2MS7ILNgB2GpCBp9AccWJWC0BoxM-ShaZw7UFO0isw4r0tn5ZvOWwujug
+*/
+    
+int check_for_endianness() {
+    unsigned int x = 1;
+    char *c = (char*) &x;
+    return (int)*c;
+}
