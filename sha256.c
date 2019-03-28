@@ -21,6 +21,9 @@ enum status {READ, PAD0, PAD1, FINISH};
 // Calculates SHA256 hash of a file
 void sha256(FILE *f);
 
+// Retrieves the next message block.
+int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits);
+
 // See Section 4.1.2.
 uint32_t sig0(uint32_t x);
 uint32_t sig1(uint32_t x);
@@ -37,6 +40,7 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 
 /*
 // Macro Functions - Section 3.2
+
 // See Section 4.1.2.
 #define rotr(x, n)   (x >> n) | (x << (32 - n))
 #define shr(x, n)    (x >> n)
@@ -50,22 +54,26 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 #define SIG1(x)      (rotr(6, x)  ^ rotr(11, x) ^ rotr(25, x))
 #define Ch(x, y, z)  (x & y) ^ ((!x) & z)
 #define Maj(x, y, z) (x & y) ^ (x & z) ^ (y & z)
-*/
 
-// Retrieves the next message block.
-int nextmsgblock(FILE *f, union msgblock *M, enum status *S, int *nobits);
+*/
 
 int main(int argc, char *argv[]){
     
-    FILE* f;
-    f = fopen(argv[1], "r");
+    // Open the file.
+    FILE* file;
+    file = fopen(argv[1], "r");
 
-    sha256(f);
+    // Run hash algorithm on the file.
+    sha256(file);
+
+    // Close the file.
+    fclose(file);
+
     return 0;
 
 }
 
-void sha256(FILE *f) {
+void sha256(FILE *file) {
    
     // The current message block.
     union msgblock M;
@@ -123,22 +131,22 @@ void sha256(FILE *f) {
     int i, j;
 
     // Loop through message blocks as per step 2, page 22.
-    while (nextmesgblock(f, M, S, nobits)) {
+    while (nextmsgblock(file, &M, &S, &nobits)) {
 
         // W[j] = M[j] for 0 <= t <=15 (Page 22).
-        for (t = 0; t < 16; t++) 
+        for (j = 0; j < 16; j++) 
              W[j] = M.t[j];
     
-        // W[t] = ... (Page 22).
+        // W[j] = ... (Page 22).
         for (j = 16; j < 64; j++)
             W[j] = sig1(W[j-2]) + W[j-7] + sig0(W[j-15]) + W[j-16];
         
-        // Initialise a, b, c, d and e as per step 2, page 22.
+        // Initialise a, b, c ... variables as per step 2, page 22.
         a = H[0]; b = H[1]; c = H[2]; d = H[3];
         e = H[4]; f = H[5]; g = H[6]; h = H[7];
 
         // Step 3.
-        for (t = 0; t < 64; t++) {
+        for (j = 0; j < 64; j++) {
             T1 = h + SIG1(e) + Ch(e, f, g) + K[j] + W[j];
             T2 = SIG0(a) + Maj(a, b, c);
             h = g;
@@ -165,6 +173,85 @@ void sha256(FILE *f) {
 
     printf("%x %x %x %x %x %x %x %x %x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
    
+}
+
+int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits) {  
+
+    // The number of bytes in current message block.
+    uint64_t nobytes;
+    
+    // Loop variables.
+    int i;
+
+    // If we have finished all the message blocks, then S should be FINISH.
+    if (*S == FINISH)
+        return 0;
+
+    // Otherwise, check if we need another block full of padding.
+    if (*S == PAD0 || *S == PAD1) { 
+        
+        // Set the first 56 bytes to all zero bits.
+        for (i = 0; i < 56; i++) 
+            M->e[i] = 0x00;
+      
+        // Set the last 64 bits to the number of bits in the file
+        // Should be big-endian.
+        M->s[7] = *nobits;
+        *S = FINISH;
+
+        // If S was PAD1, then set the first bit of M to one.
+        if (*S == PAD1)
+        M->e[0] = 0x80;
+    
+        // Keep the loop in SHA256 going for one more iteration.
+        return 1;
+    } 
+
+    // If we get down this far we haven't finished reading the lines.
+    nobytes = fread(M->e, 1, 64, file);
+    
+    // Keep track of the number of bytes we've read.
+    *nobits = *nobits + (nobytes * 8);
+
+    // If we read < 56 bytes, we can put all padding in this message block.
+    if (nobytes < 56) {
+        printf("I've found a block with less than 55 bytes.\n");
+        // Append 1 to message.
+        M->e[nobytes] = 0x80;
+        
+        // Add 0 bits up to last 64 bits.
+        while (nobytes < 56) {
+            nobytes = nobytes + 1;
+            // Set bytes to 0 
+            M->e[nobytes] = 0x00;
+        }
+        
+        // Append the file size in bits.
+        M->s[7] = *nobits;
+
+        // Set status to FINISH.
+        *S = FINISH;
+     // Otherwise, check if we can pad this message block.
+     } else if (nobytes < 64) { 
+        // Set status
+        *S = PAD0;
+        // Append 1 to message.
+        M->e[nobytes] = 0x80;
+
+        while (nobytes < 64) {
+            nobytes = nobytes + 1;
+            // Fill the rest with 0's.
+            M->e[nobytes] = 0x00;
+        }
+    // Otherwise, check if we're just at the end of the file.
+    } else if (feof(file)) {
+        // Set status to pad1, meaning we need another message block with all the padding.
+        *S = PAD1;
+    }
+
+    // If we get this far, then return 1 so the function is called again
+    return 1;
+
 }
 
 uint32_t rotr(uint32_t n, uint32_t x){
@@ -201,63 +288,4 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z) {
     return ((x & y) ^ (x & z) ^ (y & z));
  }
 
-int nextmsgblock(FILE *f, union msgblock *M, enum status *S, int *nobits) {  
 
-    // The number of bytes in current message block.
-    uint64_t nobytes;
-    
-    // Loop variables.
-    int i;
-
-    // If we have finished all the message blocks, then S should be FINISH.
-    if (*S == FINISH)
-        return 0;
-
-    // Otherwise, check if we need another block full of padding.
-    if (S == PAD0 || S == PAD1) { 
-        
-        // Set the first 56 bytes to all zero bits.
-        for (i = 0; i < 56; i++) 
-            M.e[i] = 0x00;
-        // Set the last 64 bits to the number of bits in the file
-        // Should be big-endian.
-        M.s[7] = nobits;
-        *S = FINISH;
-    } 
-    
-
-    while (S == READ) {
-
-        nobytes = fread(M.e, 1, 64, f);
-        printf("Read %2llu bytes \n", nobytes);
-        nobits = nobits + (nobytes * 8);
-
-        if (nobytes < 56) {
-            printf("I've found a block with less than 55 bytes.\n");
-            // Append 1 to message.
-            M.e[nobytes] = 0x80;
-            
-            while (nobytes < 56) {
-                nobytes = nobytes + 1;
-                // Set bytes to 0 
-                M.e[nobytes] = 0x00;
-            }
-            
-            M.s[7] = nobits;
-            S = FINISH;
-        } else if (nobytes < 64) { 
-            // Set status
-            S = PAD0;
-            // Append 1 to message.
-            M.e[nobytes] = 0x80;
-
-            while (nobytes < 64) {
-                nobytes = nobytes + 1;
-                // Fill the rest with 0's.
-                M.e[nobytes] = 0x00;
-            }
-        } else if (feof(f)) {
-            S = PAD1;
-        }
-    }
-}
