@@ -52,14 +52,20 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 // Section 4.1.2
 #define SIG0(x)      (rotr(2, x)  ^ rotr(13, x) ^ rotr(22, x))
 #define SIG1(x)      (rotr(6, x)  ^ rotr(11, x) ^ rotr(25, x))
-#define Ch(x, y, z)  (x & y) ^ ((!x) & z)
+#define Ch(x, y, z)  (x & y) ^ ((~x) & z)
 #define Maj(x, y, z) (x & y) ^ (x & z) ^ (y & z)
 
 */
  
-// Macro function for converting from little endian to big endian.
+// Macro functions for converting from little endian to big endian.
 // http://www.mit.edu/afs.new/sipb/project/merakidev/include/bits/byteswap.h
-# define BigEndian(x)                       \
+#define BigEndian32(x)                     \
+ ((((x) & 0xff000000) >> 24)                \
+| (((x) & 0x00ff0000) >>  8)                \
+| (((x) & 0x0000ff00) <<  8)                \
+| (((x) & 0x000000ff) << 24))
+
+# define BigEndian64(x)                     \
  ((((x) & 0xff00000000000000ull) >> 56)     \
 | (((x) & 0x00ff000000000000ull) >> 40)     \
 | (((x) & 0x0000ff0000000000ull) >> 24)     \
@@ -145,7 +151,7 @@ void sha256(FILE *file) {
         // W[j] = M[j] for 0 <= t <=15 (Page 22).
         for (j = 0; j < 16; j++) { 
              W[j] = M.t[j];
-             W[j] = BigEndian(W[j]);
+             W[j] = BigEndian32(W[j]);
         }
     
         // W[j] = ... (Page 22).
@@ -238,7 +244,9 @@ int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits
         
         // Append the file size in bits.
         // Convert from little to big endian
+        *nobits = BigEndian64(*nobits);
         M->s[7] = *nobits;
+
 
         // Set status to FINISH.
         *S = FINISH;
@@ -292,7 +300,7 @@ uint32_t SIG1(uint32_t x){
 }
                                  
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z) {
-    return ((x & y) ^ ((!x) & z));
+    return ((x & y) ^ ((~x) & z));
 }
                                      
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z) {
