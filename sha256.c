@@ -66,27 +66,33 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 | (((x) & 0x000000ff) << 24))
 
 # define BigEndian64(x)                     \
- ((((x) & 0xff00000000000000ull) >> 56)     \
-| (((x) & 0x00ff000000000000ull) >> 40)     \
-| (((x) & 0x0000ff0000000000ull) >> 24)     \
-| (((x) & 0x000000ff00000000ull) >> 8)      \
-| (((x) & 0x00000000ff000000ull) << 8)      \
-| (((x) & 0x0000000000ff0000ull) << 24)     \
-| (((x) & 0x000000000000ff00ull) << 40)     \
-| (((x) & 0x00000000000000ffull) << 56))
+ ((((x) & 0xff00000000000000) >> 56)     \
+| (((x) & 0x00ff000000000000) >> 40)     \
+| (((x) & 0x0000ff0000000000) >> 24)     \
+| (((x) & 0x000000ff00000000) >> 8)      \
+| (((x) & 0x00000000ff000000) << 8)      \
+| (((x) & 0x0000000000ff0000) << 24)     \
+| (((x) & 0x000000000000ff00) << 40)     \
+| (((x) & 0x00000000000000ff) << 56))
 
 
 int main(int argc, char *argv[]){
     
     // Open the file.
     FILE* file;
+
     file = fopen(argv[1], "r");
 
-    // Run hash algorithm on the file.
-    sha256(file);
+    if (file == NULL) {
+        printf("Error opening file! Make sure you supply the correct file name.\n");
+    }
+    else {
+        // Run hash algorithm on the file.
+        sha256(file);
 
-    // Close the file.
-    fclose(file);
+        // Close the file.
+        fclose(file);
+    }
 
     return 0;
 
@@ -187,7 +193,7 @@ void sha256(FILE *file) {
         H[7] = h + H[7];
     }
 
-    printf("%x %x %x %x %x %x %x %x %x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
+    printf("%x %x %x %x %x %x %x %x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
    
 }
 
