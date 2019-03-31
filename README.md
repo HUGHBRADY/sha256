@@ -13,7 +13,7 @@ The standard for the algorithm can be viewed [here]( https://nvlpubs.nist.gov/ni
 The C compiler is needed to compile this script. 
 
 Compile the file using this command:
-> gcc -o sha256.c sha256
+> gcc -o sha256 sha256.c
 
 Then run the executable using this command: 
 > ./sha256 input.txt
