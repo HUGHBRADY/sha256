@@ -38,46 +38,25 @@ uint32_t SIG1(uint32_t x);
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z);
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 
-/*
-// Macro Functions - Section 3.2
-
-// See Section 4.1.2.
-#define rotr(x, n)   (x >> n) | (x << (32 - n))
-#define shr(x, n)    (x >> n)
-
-// Section 3.2
-#define sig0(x)      (rotr(7, x)  ^ rotr(18, x) ^ shr(3, x))
-#define sig1(x)      (rotr(17, x) ^ rotr(19, x) ^ shr(10, x))
-
-// Section 4.1.2
-#define SIG0(x)      (rotr(2, x)  ^ rotr(13, x) ^ rotr(22, x))
-#define SIG1(x)      (rotr(6, x)  ^ rotr(11, x) ^ rotr(25, x))
-#define Ch(x, y, z)  (x & y) ^ ((~x) & z)
-#define Maj(x, y, z) (x & y) ^ (x & z) ^ (y & z)
-
-*/
- 
 // Macro functions for converting from little endian to big endian.
 // http://www.mit.edu/afs.new/sipb/project/merakidev/include/bits/byteswap.h
-#define BigEndian32(x)                     \
+#define BigEndian32(x)                      \
  ((((x) & 0xff000000) >> 24)                \
 | (((x) & 0x00ff0000) >>  8)                \
 | (((x) & 0x0000ff00) <<  8)                \
 | (((x) & 0x000000ff) << 24))
 
 # define BigEndian64(x)                     \
- ((((x) & 0xff00000000000000) >> 56)     \
-| (((x) & 0x00ff000000000000) >> 40)     \
-| (((x) & 0x0000ff0000000000) >> 24)     \
-| (((x) & 0x000000ff00000000) >> 8)      \
-| (((x) & 0x00000000ff000000) << 8)      \
-| (((x) & 0x0000000000ff0000) << 24)     \
-| (((x) & 0x000000000000ff00) << 40)     \
+ ((((x) & 0xff00000000000000) >> 56)        \
+| (((x) & 0x00ff000000000000) >> 40)        \
+| (((x) & 0x0000ff0000000000) >> 24)        \
+| (((x) & 0x000000ff00000000) >> 8)         \
+| (((x) & 0x00000000ff000000) << 8)         \
+| (((x) & 0x0000000000ff0000) << 24)        \
+| (((x) & 0x000000000000ff00) << 40)        \
 | (((x) & 0x00000000000000ff) << 56))
 
-
 int main(int argc, char *argv[]){
-    
     // Open the file.
     FILE* file;
 
@@ -95,11 +74,9 @@ int main(int argc, char *argv[]){
     }
 
     return 0;
-
 }
 
 void sha256(FILE *file) {
-   
     // The current message block.
     union msgblock M;
    
@@ -194,11 +171,9 @@ void sha256(FILE *file) {
     }
 
     printf("%x %x %x %x %x %x %x %x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
-   
 }
 
 int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits) {  
-
     // The number of bytes in current message block.
     uint64_t nobytes;
     
@@ -217,10 +192,10 @@ int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits
             M->e[i] = 0x00;
       
         // Set the last 64 bits to the number of bits in the file
-        // Should be big-endian.
+        // Should be big-endian.  
         M->s[7] = *nobits;
-        *S = FINISH;
-
+        *S = FINISH;    
+        
         // If S was PAD1, then set the first bit of M to one.
         if (*S == PAD1)
         M->e[0] = 0x80;
@@ -276,51 +251,46 @@ int nextmsgblock(FILE *file, union msgblock *M, enum status *S, uint64_t *nobits
 
     // If we get this far, then return 1 so the function is called again
     return 1;
-
 }
 
 uint32_t rotr(uint32_t n, uint32_t x){
     return (x >> n) | (x << (32 - n));
 }
-    
+        
 uint32_t shr(uint32_t n, uint32_t x){
     return (x >> n);
 }
-        
+                    
 uint32_t sig0(uint32_t x){
     // Sections 3.2 & 4.1.2 
     return (rotr(7, x) ^ rotr(18, x) ^ shr(3, x));
 }
-                
+                                            
 uint32_t sig1(uint32_t x){
     // Section 3.2 & 4.1.2
     return(rotr(17, x) ^ rotr(19, x) ^ shr(10, x));
 }
-                        
+                                                                            
 uint32_t SIG0(uint32_t x) {
     return (rotr(2, x) ^ rotr(13, x) ^ rotr(22, x));
 }
-                            
+                                                                                                            
 uint32_t SIG1(uint32_t x){ 
     return (rotr(6, x) ^ rotr(11, x) ^ rotr(25, x));
 }
-                                 
+                                                                                                                                                 
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z) {
     return ((x & y) ^ ((~x) & z));
 }
-                                     
+                                                                                                                                                                                          
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z) {
     return ((x & y) ^ (x & z) ^ (y & z));
- }
+}
 
-
-
-/* 
-    Function check_for_endianness() returns 1, if architecture is little endian, 0 in case of big endian.
-    http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php?fbclid=IwAR2MS7ILNgB2GpCBp9AccWJWC0BoxM-ShaZw7UFO0isw4r0tn5ZvOWwujug
-*/
-    
-int check_for_endianness() {
+// Function check_for_endianness() returns 1, if architecture is 
+// little endian, 0 in case of big endian.
+// http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php?fbclid=IwAR2MS7ILNgB2GpCBp9AccWJWC0BoxM-ShaZw7UFO0isw4r0tn5ZvOWwujug    
+int checkEndian() {
     unsigned int x = 1;
     char *c = (char*) &x;
     return (int)*c;
