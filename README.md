@@ -21,10 +21,9 @@ Then run the executable using this command:
 input.txt can be replaced with any file of your choice. 
 
 ## Implementation
-This project was completed alongside lecture videos created by Ian McLoughlin. The script consists of 
-a number of functions, the largest of which being the sha256() and nextmsgblock() functions.
-The sha256 method encrypts the inputted data. Then, nextmsgblock() deals with padding the message, meaning 
-data is appended to the end of the message to ensure that the message is of the expected length.
+The script consists of a number of functions, the largest of which being the sha256() and nextmsgblock() functions. The 
+sha256 method encrypts the inputted data. Then, nextmsgblock() deals with padding the message, meaning data is appended 
+to the end of the message to ensure that the message is of the expected length.
 
 Macro functions were included for converting bits in the message block to big endian in both 64 and 32 bit unsigned integers. 
 
